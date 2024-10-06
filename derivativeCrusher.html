@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Fraction Input</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align items at the top */
+        }
+        .container {
+            margin-top: 50px; /* Adjust the top margin as needed */
+            text-align: center;
+        }
+        .fraction {
+            display: inline-block;
+            font-size: 34px; /* Adjust font size as needed */
+            margin: 20px;
+            position: relative;
+        }
+        .numerator, .denominator, .outer-field {
+            display: inline-block;
+            text-align: center;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .numerator {
+            position: absolute;
+            top: -30px; /* Adjust the vertical position of X */
+            left: 50%; /* Position X horizontally centered */
+            transform: translateX(-50%); /* Center X horizontally */
+        }
+        .denominator {
+            margin-top: 20px; /* Adjust the vertical distance between X and Y */
+        }
+        .fraction-line {
+            width: 100%;
+            height: 2px; /* Adjust the thickness of the fraction line */
+            background-color: black; /* Adjust the color of the fraction line */
+            position: absolute;
+            top: +20px;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        .fraction-container {
+            display: inline-block;
+            position: relative;
+        }
+        .outer-field {
+            font-size: 48px; /* Adjust font size for parentheses */
+            padding: 20px; /* Adjust padding for parentheses */
+        }
+        .outer-field.left {
+            position: absolute;
+            left: -40px; /* Adjust the left position for the left parenthesis */
+        }
+        .outer-field.right {
+            position: absolute;
+            right: -40px; /* Adjust the right position for the right parenthesis */
+        }
+        .z-field {
+            font-size: 34px; /* Adjust font size for Z */
+            padding: 5px; /* Adjust padding for Z */
+            background-color: #f2f2f2;
+            cursor: pointer;
+            margin-left: 20px; /* Adjust spacing between Z and parentheses */
+            margin-right: 20px; /* Adjust spacing between Z and parentheses */
+        }
+        .letter-grid {
+            text-align: center;
+            margin-top: 20px; /* Adjust spacing between fraction and grid */
+            border: 1px solid black; /* Add border around the grid */
+            padding: 10px; /* Add padding to the grid */
+        }
+        .letter-grid button {
+            display: inline-block;
+            margin: 5px;
+            cursor: pointer;
+            padding: 5px;
+            width: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Derivative Crusher</h1>
+        <div class="fraction-container">
+            <div class="outer-field left">(</div>
+            <div class="fraction">
+                <div class="numerator">&#8706;<span onclick="showLetterGrid(this)">X</span></div>
+                <div class="fraction-line"></div>
+                <div class="denominator">&#8706;<span onclick="showLetterGrid(this)">Y</span></div>
+            </div>
+            <div class="outer-field right">)</div>
+        </div>
+        <div class="z-field" onclick="showLetterGrid(this)">Z</div>
+        <div class="letter-grid" id="letterGrid">
+            <button onclick="fillField('E')">E</button>
+            <button onclick="fillField('F')">F</button>
+            <button onclick="fillField('G')">G</button>
+            <button onclick="fillField('H')">H</button>
+            <button onclick="fillField('μ')">μ</button>
+            <button onclick="fillField('S')">S</button>
+            <button onclick="fillField('V')">V</button>
+            <button onclick="fillField('p')">p</button>
+            <button onclick="fillField('T')">T</button>
+
+        </div>
+        <button onclick="printCrushResult()">Crush</button>
+        <div id="resultContainer"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.5.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/algebrite@1.4.0/dist/algebrite.bundle-for-browser.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+    
+
+    <script>
+        var lastClickedField;
+        var numerator = document.querySelector('.numerator').textContent.slice(-1);
+        var denominator = document.querySelector('.denominator').textContent.slice(-1);
+        var constantTerm = document.querySelector('.z-field').textContent;
+        const termOrder = ['E', 'F', 'G', 'H', 'μ', 'S', 'V', 'p', 'T'];
+
+        function showLetterGrid(field) {
+            lastClickedField = field;
+        }
+
+        function fillField(value) {
+    if (lastClickedField){
+        lastClickedField.innerHTML = value; // Use innerHTML instead of textContent
+        lastClickedField = null;
+        numerator = document.querySelector('.numerator').textContent.slice(-1);
+        denominator = document.querySelector('.denominator').textContent.slice(-1);
+        constantTerm = document.querySelector('.z-field').textContent;
+    }
+}
+
+
+
+        function printCrushResult() {
+            document.getElementById("resultContainer").innerHTML = "";
+            // Call the crush function to calculate the result
+            var result = crush(numerator, denominator, constantTerm);
+
+            // Create a new paragraph element
+            var newTextElement = document.createElement("p");
+            simplifiedResult = Algebrite.run(result);
+            newTextElement.innerHTML =  toLatex(Fractionalize(simplifiedResult));
+            document.getElementById("resultContainer").appendChild(newTextElement);
+            MathJax.typeset([newTextElement]);
+
+            var newTextElement = document.createElement("p");
+            newTextElement.innerHTML = simplifiedResult;
+            document.getElementById("resultContainer").appendChild(newTextElement);
+        }
+
+        function Fractionalize(expression) {
+            // Replace symbols with LaTeX equivalents
+            
+            
+            
+            
+    let result = '';
+    let numerator = '';
+    let denominator = '';
+    let parenCount = 0;
+    let startLetter = 0; // The start letter of the fraction, once a fraction is identified
+    let endLetter = -1;  // The end letter of the fraction, once a fraction is identified
+    for (let i = 0; i < expression.length; i++) {
+        if (i <= endLetter) // After a fraction is added to the result, this loop allows us to continue evaluating the result starting immediately after the fraction
+            continue;
+        let char = expression[i];
+
+        if (char === '/') {
+            // Extracting numerator
+            for (let j = i - 1; j >= 0; j--) {
+                startLetter = j;
+                if (expression[j] === '(') {
+                    parenCount--;
+                } else if (expression[j] === ')') {
+                    parenCount++;
+                }
+                if (parenCount === 0 && (expression[j] === '+' || expression[j] === '-' || j === 0)) {
+                    numerator = expression.substring(j === 0 ? j : j + 1, i).trim();
+                    break;
+                }
+            }
+
+            // Extracting denominator
+            parenCount = 0;
+            for (let k = i + 1; k < expression.length; k++) {
+                endLetter = k;
+                if (expression[k] === '(') {
+                    parenCount++;
+                } else if (expression[k] === ')') {
+                    parenCount--;
+                }
+                if (parenCount === 0 && (expression[k] === '+' || expression[k] === '-' || k === expression.length - 1)) {
+                    denominator = expression.substring(i + 1, k === expression.length - 1 ? k + 1 : k).trim();
+                    break;
+                }
+            }
+            
+            let updatedNumerator = numerator;
+            let updatedDenominator = denominator;
+            let nestedDenominator = 0;
+            // Simplifying further if nested fractions
+            let endReached = false;
+            
+            while (!endReached)
+            {
+            outerloop:
+            for (let l = 0; l < denominator.length; l++) {
+            let denomChar = denominator[l];
+            nestedParenCount = 0;
+            if (denomChar === '/') {
+                for (let g = l + 1; g < denominator.length; g++) {
+                    if (denomChar === '(') {
+                    nestedParenCount++;
+                } else if (denomChar === ')') {
+                    nestedParenCount--;
+                }
+
+                    if (nestedParenCount === 0 && (denominator[g] === '+' || denominator[g] === '-' || g === denominator.length - 1))
+                     {
+                        if (g == denominator.length - 1)
+                            endReached = true;
+                        nestedDenominator = denominator.substring(l + 1, g).trim()
+                        denominator += '*' + nestedDenominator;
+                        denominator = Algebrite.run(denominator);
+                        numerator += '*' + nestedDenominator;
+                        numerator = Algebrite.run(numerator);
+                        endreached = true;
+                        continue outerloop;
+                    }
+                }
+            }
+            if (l == denominator.length - 1)
+                endReached = true;
+        }
+    }
+            
+
+            // Constructing fraction and updating result
+            result = (startLetter > 0 ? result.substring(0, startLetter + result.length - i + 1) : '') + '\\frac{' + Algebrite.run(numerator) + '}{' + Algebrite.run(denominator) + '}' + (expression[endLetter] === '+' || expression[endLetter] === '-' ? expression[endLetter] : '');
+            // Resetting numerator and denominator for next fraction
+            numerator = '';
+            denominator = '';
+        } else {
+            result += char; // Append non-division characters to result
+        }
+}
+    
+
+            
+            return result;
+
+        }
+
+        function toLatex(result) {
+            result = result.replace(/a(?!.*c)/g, '\\alpha ');
+            result = result.replace(/k/g, '\\kappa ');
+            result = result.replace(/\*/g, '');
+            result = '\\frac{ \\partial ' + numerator + '}{ \\partial ' + denominator + '} = ' + result;
+            result = '$$' + result + '$$';
+            
+            return result;
+        } 
+
+
+
+        function crush(numer, denom, consta) {
+            const numIndex = termOrder.indexOf(numer);
+            const denomIndex = termOrder.indexOf(denom);
+            const constIndex = termOrder.indexOf(consta);
+            if (numer == 'X' || denom == 'Y' || consta == 'Z')
+                return 'Select variables'
+            else if (numIndex == denomIndex) {
+                return '1';
+            } else if (numIndex == constIndex || denomIndex == constIndex) {
+                return '0';
+            } else if (numIndex > 3 && denomIndex < numIndex && denomIndex < constIndex) {
+                result = '1/(' + crush(denom, numer, consta) + ')';
+                return (result);
+            } else if (numIndex > 3 && constIndex < numIndex && constIndex < denomIndex) {
+                result = '(-1)*(' + crush(consta, denom, numer) + ')/(' + crush(consta, numer, denom) + ')';
+                return (result);
+            } else {
+                if (numer == 'E'){
+                    result = 'T*(' + crush('S', denom, consta) + ')-p*(' + crush('V', denom, consta) + ')';
+                    return (result);
+                }
+                else if (numer == 'F'){
+                    result = '(-S)*(' + crush('T', denom, consta) + ')-p*(' + crush('V', denom, consta) + ')';
+                    return (result);
+                }
+                else if (numer == 'H'){
+                    result = 'T*(' + crush('S', denom, consta) + ')+V*(' + crush('p', denom, consta) + ')';
+                    return (result);
+                }
+                else if (numer == 'G'){
+                    result = '(-S)*(' + crush('T', denom, consta) + ')+V*(' + crush('p', denom, consta) +')';
+                    return (result);
+                }
+                else if (numer == 'μ'){
+                    result = ('((-S)*(' + crush('T', denom, consta) + ')+V*(' + crush('p', denom, consta)) + '))/N';
+                    return (result);
+                }
+                else if (numer == 'S') {
+                    /* Apply Maxwell Equations to solve if applicable */
+                    if (denom == 'V' && consta == 'T'){
+                        result = '(' + crush('p', 'T', 'V') + ')';
+                        return (result);
+                    }
+                    else if (denom == 'p' && consta == 'T'){
+                        result = '(-1)*(' + crush('V', 'T', 'p') +')';
+                        return (result);
+                    }
+                    /* Apply definitions of heat capacities if applicable */
+                    else if (denom == 'T' && consta == 'V'){
+                        result = 'C_v/T';
+                        return (result);
+                    }
+                    else if (denom == 'T' && consta == 'p')
+                        return 'C_p/T';
+                    /* Otherwise, put a T under it and solve this way               C<sub>p</sub>/T */
+                    else{
+                        result ='(' + crush(numer, 'T', consta) + ')/(' + crush(denom, 'T', consta) + ')';
+                        return (result);
+                    }
+                }
+                else if (numer == 'V' && denom == 'T' && consta == 'p')
+                    return 'V*a' /*α*/
+                else if (numer == 'V' && denom == 'p' && consta == 'T')
+                    return '(-1)*V*k' /*κ*/
+            }
+        }
+       
+        
+    // Check if the fraction is an array
+    
+
+
+        
+
+    </script>
+</body>
+</html>
